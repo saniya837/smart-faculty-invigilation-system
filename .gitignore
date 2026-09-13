@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Local Flask database
+invigilation.db
+
+# Uploaded/generated files
+uploads/
+
+# Local Python environment
+.vscode/
