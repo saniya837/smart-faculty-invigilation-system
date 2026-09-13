@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from functools import wraps
 from models import User, db
+from werkzeug.security import generate_password_hash
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -46,6 +47,60 @@ def role_required(role):
 
         return decorated_function
     return decorator
+
+
+# ----------------------------
+# First-Time Admin Setup
+# ----------------------------
+@auth_bp.route("/setup", methods=["GET", "POST"])
+def setup():
+
+    # If an admin already exists, setup is no longer allowed.
+    existing_admin = User.query.filter_by(role="admin").first()
+
+    if existing_admin:
+        flash("Initial setup has already been completed.", "error")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+
+        if not username or not password or not confirm_password:
+            flash("Please fill in all fields.", "error")
+            return render_template("setup.html")
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.", "error")
+            return render_template("setup.html")
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template("setup.html")
+
+        existing_user = User.query.filter_by(username=username).first()
+
+        if existing_user:
+            flash("Username already exists. Please choose another.", "error")
+            return render_template("setup.html")
+
+        admin = User(
+            username=username,
+            password=generate_password_hash(password),
+            role="admin",
+            faculty_id=None
+        )
+
+        db.session.add(admin)
+        db.session.commit()
+
+        flash("Admin account created successfully. Please login.", "success")
+
+        return redirect(url_for("auth.login"))
+
+    return render_template("setup.html")
 
 
 # ----------------------------
