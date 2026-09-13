@@ -36,6 +36,19 @@ def create_app():
 
     db.init_app(app)
 
+    # Create database tables automatically.
+    # This is required when running with Gunicorn on Render.
+    with app.app_context():
+        try:
+            print("Creating database tables...")
+            db.create_all()
+            print("Tables created successfully!")
+        except Exception:
+            print("DATABASE ERROR:")
+            import traceback
+            traceback.print_exc()
+            raise
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(faculty_bp)
@@ -45,31 +58,14 @@ def create_app():
         if "user_id" in session:
             if session.get("role") == "admin":
                 return redirect(url_for("admin.dashboard"))
+
             return redirect(url_for("faculty.dashboard"))
 
         return redirect(url_for("auth.login"))
 
     print("Flask app created")
+
     return app
-
-
-def setup_database(app):
-    with app.app_context():
-
-        print("Running database setup...")
-
-        try:
-            print("Creating database tables...")
-
-            db.create_all()
-
-            print("Tables created successfully!")
-
-        except Exception:
-            print("DATABASE ERROR:")
-            import traceback
-            traceback.print_exc()
-            raise
 
 
 print("Starting application...")
@@ -78,8 +74,6 @@ app = create_app()
 
 
 if __name__ == "__main__":
-
-    setup_database(app)
 
     print("Starting Flask server...")
 
