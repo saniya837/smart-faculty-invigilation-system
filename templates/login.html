@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Smart Faculty Invigilation{% endblock %}
+
+{% block anonymous_content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-logo">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <h1 class="login-title">InvigilateSmart</h1>
+            <p class="login-subtitle">Faculty Invigilation Allotment System</p>
+        </div>
+        
+        <form action="{{ url_for('auth.login') }}" method="POST" class="login-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div style="position: relative;">
+                    <i class="fas fa-user" style="position: absolute; left: 16px; top: 16px; color: var(--text-secondary);"></i>
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Enter username" style="padding-left: 45px;" required autocomplete="username">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div style="position: relative;">
+                    <i class="fas fa-lock" style="position: absolute; left: 16px; top: 16px; color: var(--text-secondary);"></i>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" style="padding-left: 45px;" required autocomplete="current-password">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 14px;">
+                <i class="fas fa-sign-in-alt"></i><span>Log In Securely</span>
+            </button>
+        </form>
+        
+        <div style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); margin-top: -10px;">
+            College Examination Cell &bull; Authorized Personnel Only
+        </div>
+    </div>
+</div>
+{% endblock %}

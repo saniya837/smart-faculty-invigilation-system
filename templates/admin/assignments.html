@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Assignments - Smart Invigilation{% endblock %}
+{% block page_title %}Examination Allotments List{% endblock %}
+
+{% block content %}
+<!-- Search Filters -->
+<div class="filters-bar">
+    <form method="GET" action="{{ url_for('admin.assignments') }}" style="display: flex; flex-grow: 1; gap: 16px; flex-wrap: wrap; align-items: flex-end;">
+        <div class="filter-item">
+            <label for="faculty_name">Faculty Name</label>
+            <input type="text" id="faculty_name" name="faculty_name" class="form-control" placeholder="Search faculty..." value="{{ request.args.get('faculty_name', '') }}">
+        </div>
+        <div class="filter-item">
+            <label for="department_name">Department</label>
+            <input type="text" id="department_name" name="department_name" class="form-control" placeholder="Search department..." value="{{ request.args.get('department_name', '') }}">
+        </div>
+        <div class="filter-item">
+            <label for="subject">Subject</label>
+            <input type="text" id="subject" name="subject" class="form-control" placeholder="Search subject..." value="{{ request.args.get('subject', '') }}">
+        </div>
+        <div class="filter-item">
+            <label for="hall_name">Hall</label>
+            <input type="text" id="hall_name" name="hall_name" class="form-control" placeholder="Search venue..." value="{{ request.args.get('hall_name', '') }}">
+        </div>
+        <div class="filter-item" style="min-width: 140px;">
+            <label for="date">Exam Date</label>
+            <input type="date" id="date" name="date" class="form-control" value="{{ request.args.get('date', '') }}">
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button type="submit" class="btn btn-secondary">
+                <i class="fas fa-search"></i><span>Search</span>
+            </button>
+            <a href="{{ url_for('admin.assignments') }}" class="btn btn-secondary btn-icon" title="Reset Filters">
+                <i class="fas fa-undo"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Assignments Table Panel -->
+<div class="panel-card">
+    <div class="panel-header">
+        <h3 class="panel-title">Invigilation Assignments Master Schedule</h3>
+    </div>
+    <div class="panel-body">
+        <div class="table-container">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time Slot</th>
+                        <th>Exam Subject</th>
+                        <th>Examination Hall</th>
+                        <th>Department</th>
+                        <th>Assigned Invigilator</th>
+                        <th>Allotment Status</th>
+                        <th style="text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if assignments %}
+                        {% for asg in assignments %}
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600;">{{ asg.exam.date.strftime('%Y-%m-%d') }}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Exam ID: #{{ asg.exam.id }}</div>
+                                </td>
+                                <td>{{ asg.exam.start_time.strftime('%H:%M') }} - {{ asg.exam.end_time.strftime('%H:%M') }}</td>
+                                <td style="font-weight: 500;">{{ asg.exam.subject }}</td>
+                                <td>{{ asg.exam.hall.name }} <span style="font-size: 0.75rem; color: var(--text-secondary);">(Cap: {{ asg.exam.hall.capacity }})</span></td>
+                                <td>{{ asg.exam.department.name }}</td>
+                                <td>
+                                    {% if asg.faculty %}
+                                        <div style="font-weight: 600;">{{ asg.faculty.name }}</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ asg.faculty.department.name }}</div>
+                                    {% else %}
+                                        <span style="color: var(--danger); font-weight: bold;"><i class="fas fa-exclamation-triangle"></i> Unassigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {% if asg.status == 'Assigned' %}assigned{% elif asg.status == 'Exchanged' %}exchanged{% else %}alert-unassigned{% endif %}">
+                                        {{ asg.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 8px; justify-content: center;">
+                                        <button class="btn btn-secondary btn-icon btn-reassign" 
+                                                data-id="{{ asg.id }}"
+                                                data-subject="{{ asg.exam.subject }}"
+                                                data-date="{{ asg.exam.date.strftime('%Y-%m-%d') }}"
+                                                data-time="{{ asg.exam.start_time.strftime('%H:%M') }} - {{ asg.exam.end_time.strftime('%H:%M') }}"
+                                                data-hall="{{ asg.exam.hall.name }}"
+                                                data-faculty-id="{{ asg.faculty_id }}"
+                                                title="Reassign Invigilator">
+                                            <i class="fas fa-user-edit"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 40px;">
+                                <i class="fas fa-calendar-times" style="font-size: 2.5rem; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+                                No assignments found matching filters.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Reassign Duty -->
+<div class="modal-overlay" id="reassign-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Manual Reassign Duty</h3>
+            <span class="modal-close" data-close-modal="reassign-modal">&times;</span>
+        </div>
+        <form method="POST" id="reassign-form" action="">
+            <div class="modal-body">
+                <div style="background-color: var(--bg-tertiary); padding: 14px; border-radius: var(--border-radius); font-size: 0.85rem; line-height: 1.5; margin-bottom: 20px;">
+                    <div style="color: var(--text-secondary);">Target Exam:</div>
+                    <div id="modal-exam-title" style="font-weight: 600; color: var(--text-primary);">DSA (2026-08-04)</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="modal-faculty-select">Select Invigilator</label>
+                    <select id="modal-faculty-select" name="faculty_id" class="form-control" required>
+                        <option value="unassigned">-- Leave Unassigned (Alert status) --</option>
+                        {% for fac in faculties %}
+                            <option value="{{ fac.id }}">{{ fac.name }} ({{ fac.department.name }}) [Duties: {{ fac.total_assigned_duties }}/{{ fac.max_duties }}]</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Live conflict warning box -->
+                <div id="modal-validation-box" style="margin-top: 14px; padding: 12px; border-radius: 8px; font-size: 0.8rem; line-height: 1.4; display: none; background-color: var(--bg-tertiary);">
+                    <!-- Fed dynamically via JS -->
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close-modal="reassign-modal">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="modal-submit-btn">Save Assignment</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Auto Allocation - Smart Invigilation{% endblock %}
+{% block page_title %}Automatic Invigilation Allocation{% endblock %}
+
+{% block content %}
+<div class="charts-grid" style="grid-template-columns: 1fr 2fr; gap: 24px;">
+    <!-- Algorithm Trigger Panel -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3 class="panel-title">Allocation Engine</h3>
+        </div>
+        <div class="panel-body">
+            <form method="POST" action="{{ url_for('admin.allocation') }}" style="display: flex; flex-direction: column; gap: 20px;">
+                <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
+                    Runs the rule-based assignment solver to allot invigilators based on department profiles, availability boundaries, and workload balance constraints.
+                </p>
+                
+                <div class="form-group">
+                    <label style="font-weight: 600;">Execution Mode</label>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: normal;">
+                            <input type="radio" name="clear_existing" value="true" checked style="width: 18px; height: 18px;">
+                            <div>
+                                <strong>Fresh Generation (Recommended)</strong>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">Clears all current assignments and builds a fully optimized schedule from scratch.</div>
+                            </div>
+                        </label>
+                        
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: normal; margin-top: 6px;">
+                            <input type="radio" name="clear_existing" value="false" style="width: 18px; height: 18px;">
+                            <div>
+                                <strong>Incremental Fill</strong>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">Preserves existing assignments and only allocates duties for unassigned slots.</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="margin-top: 10px; padding: 14px;">
+                    <i class="fas fa-magic"></i><span>Generate Allotments</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Allocation Summary and Logs Panel -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3 class="panel-title">Engine Execution Output Log</h3>
+        </div>
+        <div class="panel-body">
+            {% if summary %}
+                <!-- Execution Metrics -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+                    <div style="background-color: var(--bg-tertiary); padding: 16px; border-radius: var(--border-radius); text-align: center;">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Total Slots</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">{{ summary.total_slots }}</div>
+                    </div>
+                    <div style="background-color: var(--bg-tertiary); padding: 16px; border-radius: var(--border-radius); text-align: center; border-bottom: 3px solid var(--success);">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Assigned Duties</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">{{ summary.assigned_count }}</div>
+                    </div>
+                    <div style="background-color: var(--bg-tertiary); padding: 16px; border-radius: var(--border-radius); text-align: center; border-bottom: 3px solid {% if summary.alert_count > 0 %}var(--danger){% else %}var(--success){% endif %};">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Shortage Alarms</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: {% if summary.alert_count > 0 %}var(--danger){% else %}var(--success){% endif %};">{{ summary.alert_count }}</div>
+                    </div>
+                </div>
+                
+                <!-- Terminal-like Log Container -->
+                <div style="background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 20px; font-family: monospace; font-size: 0.8rem; color: var(--text-secondary); max-height: 250px; overflow-y: auto; line-height: 1.6;">
+                    {% for log in summary.logs %}
+                        <div style="{% if 'ALERT' in log %}color: var(--danger); font-weight: bold;{% elif 'completed' in log %}color: var(--success);{% endif %}">
+                            &gt; {{ log }}
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; margin-top: 20px; gap: 12px;">
+                    <a href="{{ url_for('admin.assignments') }}" class="btn btn-primary">
+                        <i class="fas fa-clipboard-list"></i><span>Review Schedule</span>
+                    </a>
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+                    <i class="fas fa-terminal" style="font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
+                    Allotment output log is empty. Trigger the engine on the left to start allocation.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

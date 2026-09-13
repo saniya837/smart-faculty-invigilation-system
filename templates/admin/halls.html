@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Exam Halls - Smart Invigilation{% endblock %}
+{% block page_title %}Examination Halls{% endblock %}
+
+{% block content %}
+<div class="charts-grid" style="grid-template-columns: 1fr 2fr; gap: 24px;">
+    <!-- Add Hall Form -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3 class="panel-title">Add Exam Hall</h3>
+        </div>
+        <div class="panel-body">
+            <form method="POST" action="{{ url_for('admin.halls') }}">
+                <div class="form-group">
+                    <label for="name">Hall / Room Name</label>
+                    <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Block C Room 302" required>
+                </div>
+                <div class="form-group">
+                    <label for="capacity">Student Capacity</label>
+                    <input type="number" id="capacity" name="capacity" class="form-control" placeholder="e.g. 40" min="1" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+                    <i class="fas fa-plus"></i><span>Add Hall</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Halls List -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3 class="panel-title">Existing Venues</h3>
+        </div>
+        <div class="panel-body">
+            <div class="table-container">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Hall ID</th>
+                            <th>Venue Name</th>
+                            <th>Student Capacity</th>
+                            <th style="text-align: center;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if halls %}
+                            {% for hall in halls %}
+                                <tr>
+                                    <td>#{{ hall.id }}</td>
+                                    <td style="font-weight: 600;">{{ hall.name }}</td>
+                                    <td>
+                                        <span class="badge info">
+                                            <i class="fas fa-chair"></i> {{ hall.capacity }} Seats
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; justify-content: center;">
+                                            <form method="POST" action="{{ url_for('admin.delete_hall', id=hall.id) }}" onsubmit="return confirm('Deleting this hall will delete all scheduled exams in this venue. Proceed?');">
+                                                <button type="submit" class="btn btn-danger btn-icon" title="Delete Venue">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 40px;">
+                                    <i class="fas fa-folder-open" style="font-size: 2rem; margin-bottom: 12px; display: block;"></i>
+                                    No examination halls registered.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

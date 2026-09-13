@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Faculty Dashboard - Smart Invigilation{% endblock %}
+{% block page_title %}Faculty Console{% endblock %}
+
+{% block content %}
+<!-- Metrics Cards Grid -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-info">
+            <span class="metric-label">Upcoming Duties</span>
+            <span class="metric-value">{{ upcoming_duties|length }}</span>
+        </div>
+        <div class="metric-icon blue">
+            <i class="fas fa-calendar-alt"></i>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-info">
+            <span class="metric-label">Completed Duties</span>
+            <span class="metric-value">{{ completed_duties|length }}</span>
+        </div>
+        <div class="metric-icon green">
+            <i class="fas fa-check-double"></i>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-info">
+            <span class="metric-label">Total Assigned Duties</span>
+            <span class="metric-value">{{ upcoming_duties|length + completed_duties|length }}</span>
+        </div>
+        <div class="metric-icon cyan">
+            <i class="fas fa-user-clock"></i>
+        </div>
+    </div>
+    
+    <div class="metric-card" style="background-color: var(--bg-tertiary);">
+        <div class="metric-info">
+            <span class="metric-label">Max Load Allocation</span>
+            <span class="metric-value" style="font-size: 1.5rem;">{{ faculty.max_duties }} max</span>
+        </div>
+        <div class="metric-icon yellow">
+            <i class="fas fa-sliders-h"></i>
+        </div>
+    </div>
+</div>
+
+<div class="charts-grid" style="grid-template-columns: 2fr 1fr; gap: 24px;">
+    <!-- Interactive Duty Calendar Card -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <h3 class="chart-title">Invigilation Duty Calendar</h3>
+            <div style="display: flex; gap: 8px;">
+                <a href="{{ url_for('faculty.download_schedule', format='excel') }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">
+                    <i class="fas fa-file-excel"></i><span>Excel</span>
+                </a>
+                <a href="{{ url_for('faculty.download_schedule', format='pdf') }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">
+                    <i class="fas fa-file-pdf"></i><span>PDF</span>
+                </a>
+            </div>
+        </div>
+        <!-- Simple grid-based custom JS Calendar -->
+        <div id="duty-calendar-widget"></div>
+    </div>
+    
+    <!-- Notifications & Duty Swap Form Column -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Notification Panel -->
+        <div class="panel-card" style="max-height: 380px;">
+            <div class="panel-header" style="padding: 16px 20px;">
+                <h3 class="panel-title" style="font-size: 0.95rem;">
+                    <i class="fas fa-bell"></i> Notifications
+                    {% set unread_notifs = notifications|selectattr('is_read', 'equalto', false)|list %}
+                    {% if unread_notifs|length > 0 %}
+                        <span id="notif-badge" style="background-color: var(--danger); color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; margin-left: 6px;">{{ unread_notifs|length }}</span>
+                    {% endif %}
+                </h3>
+            </div>
+            <div class="panel-body" style="padding: 0; overflow-y: auto;">
+                {% if notifications %}
+                    {% for notif in notifications %}
+                        <div class="notification-item {% if not notif.is_read %}unread{% endif %}" data-id="{{ notif.id }}">
+                            <div class="notification-message">
+                                <div>{{ notif.message }}</div>
+                                <div class="notification-time">{{ notif.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                            {% if not notif.is_read %}
+                                <span class="notification-mark-read" title="Mark as Read"><i class="fas fa-check"></i> Read</span>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 40px 10px; color: var(--text-secondary); font-size: 0.85rem;">
+                        No notifications.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Request Swap Panel -->
+        <div class="panel-card">
+            <div class="panel-header" style="padding: 16px 20px;">
+                <h3 class="panel-title" style="font-size: 0.95rem;"><i class="fas fa-exchange-alt"></i> Request Duty Swap</h3>
+            </div>
+            <div class="panel-body" style="padding: 16px 20px;">
+                <form method="POST" action="{{ url_for('faculty.request_exchange') }}">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label for="assignment_id">Select Your Duty</label>
+                        <select id="assignment_id" name="assignment_id" class="form-control" required style="padding: 8px 12px; font-size: 0.85rem;">
+                            <option value="">-- Choose Upcoming Duty --</option>
+                            {% for a in upcoming_duties %}
+                                <option value="{{ a.id }}">{{ a.exam.subject }} ({{ a.exam.date.strftime('%Y-%m-%d') }} @ {{ a.exam.start_time.strftime('%H:%M') }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label for="target_faculty_id">Swap With Colleague</label>
+                        <select id="target_faculty_id" name="target_faculty_id" class="form-control" required style="padding: 8px 12px; font-size: 0.85rem;">
+                            <option value="">-- Choose Faculty Member --</option>
+                            {% for other in other_faculties %}
+                                <option value="{{ other.id }}">{{ other.name }} ({{ other.department.name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label for="reason">Reason (Optional)</label>
+                        <input type="text" id="reason" name="reason" class="form-control" placeholder="Brief reason for exchange" style="padding: 8px 12px; font-size: 0.85rem;">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 0.85rem;">
+                        <i class="fas fa-paper-plane"></i><span>Submit Swap Request</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Swap Handover Activity Boards -->
+<div class="panel-card">
+    <div class="panel-header">
+        <h3 class="panel-title"><i class="fas fa-clipboard-check"></i> Duty Swap Activity Boards</h3>
+    </div>
+    <div class="panel-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <!-- Received Swap Requests -->
+            <div>
+                <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-inbox text-secondary"></i> Swap Requests Received
+                </h4>
+                <div class="table-container" style="border: 1px solid var(--border-color); border-radius: var(--border-radius); background-color: var(--bg-primary);">
+                    <table class="custom-table" style="font-size: 0.8rem;">
+                        <thead>
+                            <tr>
+                                <th>Requester</th>
+                                <th>Duty Details</th>
+                                <th>Reason</th>
+                                <th style="text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if received_requests %}
+                                {% for r in received_requests %}
+                                    <tr>
+                                        <td style="font-weight: 600;">{{ r.assignment.faculty.name }}</td>
+                                        <td>
+                                            <div>{{ r.assignment.exam.subject }}</div>
+                                            <div style="font-size: 0.7rem; color: var(--text-secondary);">{{ r.assignment.exam.date.strftime('%Y-%m-%d') }} @ {{ r.assignment.exam.start_time.strftime('%H:%M') }}</div>
+                                        </td>
+                                        <td>{{ r.request_reason or "N/A" }}</td>
+                                        <td>
+                                            <div style="display: flex; gap: 6px; justify-content: center;">
+                                                <form method="POST" action="{{ url_for('faculty.respond_exchange', id=r.id) }}">
+                                                    <input type="hidden" name="action" value="approve">
+                                                    <button type="submit" class="btn btn-success btn-icon" style="padding: 6px;" title="Approve swap (Automatic checks will execute)">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                </form>
+                                                <form method="POST" action="{{ url_for('faculty.respond_exchange', id=r.id) }}">
+                                                    <input type="hidden" name="action" value="reject">
+                                                    <button type="submit" class="btn btn-danger btn-icon" style="padding: 6px;" title="Reject swap">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                                        No pending swap requests received.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Sent Swap Requests -->
+            <div>
+                <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-paper-plane text-secondary"></i> Swap Requests Sent
+                </h4>
+                <div class="table-container" style="border: 1px solid var(--border-color); border-radius: var(--border-radius); background-color: var(--bg-primary);">
+                    <table class="custom-table" style="font-size: 0.8rem;">
+                        <thead>
+                            <tr>
+                                <th>Target Faculty</th>
+                                <th>Duty Details</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if sent_requests %}
+                                {% for r in sent_requests %}
+                                    <tr>
+                                        <td style="font-weight: 600;">{{ r.target_faculty.name }}</td>
+                                        <td>
+                                            <div>{{ r.assignment.exam.subject }}</div>
+                                            <div style="font-size: 0.7rem; color: var(--text-secondary);">{{ r.assignment.exam.date.strftime('%Y-%m-%d') }}</div>
+                                        </td>
+                                        <td>{{ r.request_reason or "N/A" }}</td>
+                                        <td>
+                                            <span class="badge {% if r.status == 'Approved' %}assigned{% elif r.status == 'Pending' %}pending{% else %}alert-unassigned{% endif %}" style="padding: 4px 8px; font-size: 0.7rem;">
+                                                {{ r.status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+                                        No sent swap requests.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize Calendar
+        const events = {{ calendar_events|tojson }};
+        initDutyCalendar('duty-calendar-widget', events);
+    });
+</script>
+{% endblock %}

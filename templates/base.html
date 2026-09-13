@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Faculty Invigilation{% endblock %}</title>
+    <!-- CSS Dependencies -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Flash Messages Container -->
+    <div class="flash-container" id="flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="app-container">
+        {% if session.get('user_id') %}
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo-icon"><i class="fas fa-calendar-check"></i></div>
+                    <span>InvigilateSmart</span>
+                </div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                {% if session.get('role') == 'admin' %}
+                    <!-- Admin Sidebar Menu -->
+                    <li class="menu-item {% if request.path == url_for('admin.dashboard') %}active{% endif %}">
+                        <a href="{{ url_for('admin.dashboard') }}">
+                            <i class="fas fa-chart-line"></i><span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="menu-item {% if request.path == url_for('admin.departments') %}active{% endif %}">
+                        <a href="{{ url_for('admin.departments') }}">
+                            <i class="fas fa-sitemap"></i><span>Departments</span>
+                        </a>
+                    </li>
+                    <li class="menu-item {% if request.path == url_for('admin.halls') %}active{% endif %}">
+                        <a href="{{ url_for('admin.halls') }}">
+                            <i class="fas fa-building"></i><span>Exam Halls</span>
+                        </a>
+                    </li>
+                    <li class="menu-item {% if request.path == url_for('admin.faculty') %}active{% endif %}">
+                        <a href="{{ url_for('admin.faculty') }}">
+                            <i class="fas fa-users"></i><span>Faculty Profiles</span>
+                        </a>
+                    </li>
+                    <li class="menu-item {% if request.path == url_for('admin.upload') %}active{% endif %}">
+                        <a href="{{ url_for('admin.upload') }}">
+                            <i class="fas fa-file-upload"></i><span>Upload Timetable</span>
+                        </a>
+                    </li>
+                    <li class="menu-item {% if request.path == url_for('admin.allocation') %}active{% endif %}">
+                        <a href="{{ url_for('admin.allocation') }}">
+                            <i class="fas fa-magic"></i><span>Auto Allocation</span>
+                        </a>
+                    </li>
+                    <li class="menu-item {% if request.path == url_for('admin.assignments') %}active{% endif %}">
+                        <a href="{{ url_for('admin.assignments') }}">
+                            <i class="fas fa-list-ul"></i><span>Assignments List</span>
+                        </a>
+                    </li>
+                    <li class="menu-item {% if request.path == url_for('admin.reports') %}active{% endif %}">
+                        <a href="{{ url_for('admin.reports') }}">
+                            <i class="fas fa-file-download"></i><span>Reports Panel</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <!-- Faculty Sidebar Menu -->
+                    <li class="menu-item {% if request.path == url_for('faculty.dashboard') %}active{% endif %}">
+                        <a href="{{ url_for('faculty.dashboard') }}">
+                            <i class="fas fa-columns"></i><span>Dashboard</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile-summary">
+                    <div class="avatar">
+                        {{ session.get('username')[0].upper() if session.get('username') else 'U' }}
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-name">{{ session.get('username') }}</div>
+                        <div class="profile-role">{{ session.get('role') }}</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper">
+            <header class="main-header">
+                <div class="header-left">
+                    <i class="fas fa-bars menu-toggle" id="menu-toggle"></i>
+                    <h2 class="page-title">{% block page_title %}Dashboard{% endblock %}</h2>
+                </div>
+                
+                <div class="header-right">
+                    <!-- Light / Dark Mode Toggle -->
+                    <button class="theme-toggle" id="theme-toggle-btn" title="Toggle Theme">
+                        <i class="fas fa-sun"></i>
+                    </button>
+                    <!-- Logout -->
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary" style="padding: 8px 16px;">
+                        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+                    </a>
+                </div>
+            </header>
+            
+            <main class="content-area">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+        {% else %}
+            <!-- For anonymous pages e.g. Login -->
+            <div style="width: 100vw; min-height: 100vh;">
+                {% block anonymous_content %}{% endblock %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Auto-remove flash messages after 4 seconds
+        setTimeout(() => {
+            const container = document.getElementById('flash-container');
+            if (container) {
+                const messages = container.querySelectorAll('.flash-message');
+                messages.forEach(msg => {
+                    msg.style.opacity = '0';
+                    msg.style.transform = 'translateX(100%)';
+                    msg.style.transition = 'all 0.5s ease-out';
+                    setTimeout(() => msg.remove(), 500);
+                });
+            }
+        }, 4000);
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

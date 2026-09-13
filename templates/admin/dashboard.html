@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Smart Faculty Invigilation{% endblock %}
+{% block page_title %}Administrative Dashboard{% endblock %}
+
+{% block content %}
+<!-- Metrics Cards Grid -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-info">
+            <span class="metric-label">Total Faculty</span>
+            <span class="metric-value">{{ total_faculty }}</span>
+        </div>
+        <div class="metric-icon blue">
+            <i class="fas fa-users"></i>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-info">
+            <span class="metric-label">Total Exams</span>
+            <span class="metric-value">{{ total_exams }}</span>
+        </div>
+        <div class="metric-icon cyan">
+            <i class="fas fa-file-invoice"></i>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-info">
+            <span class="metric-label">Today's Exams</span>
+            <span class="metric-value">{{ todays_exams_count }}</span>
+        </div>
+        <div class="metric-icon green">
+            <i class="fas fa-calendar-day"></i>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-info">
+            <span class="metric-label">Shortages (Alerts)</span>
+            <span class="metric-value">{{ pending_assignments }}</span>
+        </div>
+        <div class="metric-icon red">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="charts-grid">
+    <!-- Workload Distribution Bar Chart -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <h3 class="chart-title">Faculty Workload Distribution (Assigned Duties)</h3>
+            <i class="fas fa-chart-bar text-secondary"></i>
+        </div>
+        <div class="chart-container">
+            <canvas id="workloadChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Utilization Donut Chart -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <h3 class="chart-title">Faculty Utilization</h3>
+            <i class="fas fa-chart-pie text-secondary"></i>
+        </div>
+        <div class="chart-container">
+            <canvas id="utilizationChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Action Shortcuts -->
+<div class="panel-card">
+    <div class="panel-header">
+        <h3 class="panel-title">Allotment Operations Control Panel</h3>
+    </div>
+    <div class="panel-body" style="display: flex; gap: 16px; flex-wrap: wrap;">
+        <a href="{{ url_for('admin.upload') }}" class="btn btn-primary">
+            <i class="fas fa-file-upload"></i><span>1. Upload Exam Timetable</span>
+        </a>
+        <a href="{{ url_for('admin.allocation') }}" class="btn btn-success">
+            <i class="fas fa-magic"></i><span>2. Generate Automatic Allocations</span>
+        </a>
+        <a href="{{ url_for('admin.assignments') }}" class="btn btn-secondary">
+            <i class="fas fa-edit"></i><span>3. Review & Edit Assignments</span>
+        </a>
+        <a href="{{ url_for('admin.reports') }}" class="btn btn-secondary">
+            <i class="fas fa-file-download"></i><span>4. Export PDF & Excel Reports</span>
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Shared chart styling configurations based on theme
+        const getCSSVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).strip || getComputedStyle(document.documentElement).getPropertyValue(name);
+        
+        const textPrimary = getCSSVar('--text-primary').trim();
+        const textSecondary = getCSSVar('--text-secondary').trim();
+        const borderColor = getCSSVar('--border-color').trim();
+        
+        // 1. Workload Chart (Horizontal Bar Chart)
+        const ctxWorkload = document.getElementById('workloadChart').getContext('2d');
+        const facultyNames = {{ faculty_names|tojson }};
+        const facultyDuties = {{ faculty_duties|tojson }};
+        
+        new Chart(ctxWorkload, {
+            type: 'bar',
+            data: {
+                labels: facultyNames,
+                datasets: [{
+                    label: 'Assigned Duties',
+                    data: facultyDuties,
+                    backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: textSecondary,
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: borderColor
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: textSecondary
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 2. Utilization Chart (Donut Chart)
+        const ctxUtil = document.getElementById('utilizationChart').getContext('2d');
+        const utilLabels = {{ utilization_labels|tojson }};
+        const utilValues = {{ utilization_values|tojson }};
+        
+        new Chart(ctxUtil, {
+            type: 'doughnut',
+            data: {
+                labels: utilLabels,
+                datasets: [{
+                    data: utilValues,
+                    backgroundColor: [
+                        'rgba(148, 163, 184, 0.65)', // Grey - 0
+                        'rgba(16, 185, 129, 0.75)',  // Green - 1-2
+                        'rgba(245, 158, 11, 0.75)',  // Yellow - 3-4
+                        'rgba(239, 68, 68, 0.75)'    // Red - 5+
+                    ],
+                    borderColor: borderColor,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: textSecondary,
+                            boxWidth: 12
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Timetable - Smart Invigilation{% endblock %}
+{% block page_title %}Upload Examination Timetable{% endblock %}
+
+{% block content %}
+<!-- Validation errors list -->
+{% if errors %}
+    <div class="validation-errors-list">
+        <h4><i class="fas fa-exclamation-circle"></i> Timetable Validation Failed</h4>
+        <p>The system found constraints or format errors in the file. Please resolve the following errors and re-upload. No changes were saved to the database.</p>
+        <ul>
+            {% for error in errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+<div class="charts-grid" style="grid-template-columns: 2fr 1fr; gap: 24px;">
+    <!-- Drag and Drop Upload Panel -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3 class="panel-title">Upload Timetable File</h3>
+        </div>
+        <div class="panel-body">
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin.upload') }}" style="display: flex; flex-direction: column; gap: 24px;">
+                <div class="upload-dropzone" id="upload-dropzone">
+                    <i class="fas fa-file-excel upload-icon"></i>
+                    <p style="font-weight: 600;">Drag & Drop your timetable file here</p>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Supports Excel (.xlsx) and CSV (.csv) formats</span>
+                    <input type="file" id="timetable_file" name="timetable_file" style="display: none;" accept=".csv, .xlsx">
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-cloud-upload-alt"></i><span>Parse & Import Schedule</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Template Guidelines Panel -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3 class="panel-title">File Requirements</h3>
+        </div>
+        <div class="panel-body" style="font-size: 0.85rem; line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
+            <p>Ensure your CSV or Excel workbook contains the following columns in the header row:</p>
+            
+            <ul style="padding-left: 20px; list-style-type: square; color: var(--text-secondary);">
+                <li><strong>Subject</strong>: Text name of exam subject.</li>
+                <li><strong>Date</strong>: Exam date (YYYY-MM-DD).</li>
+                <li><strong>Start Time</strong>: HH:MM (24-hour format).</li>
+                <li><strong>End Time</strong>: HH:MM (24-hour format).</li>
+                <li><strong>Hall Name</strong>: Exact name of existing Exam Hall.</li>
+                <li><strong>Department</strong>: Exact name of existing Department.</li>
+                <li><strong>Required Invigilators</strong>: Integer (e.g. 1 or 2).</li>
+            </ul>
+            
+            <div style="background-color: var(--bg-tertiary); padding: 12px; border-radius: var(--border-radius); border-left: 4px solid var(--accent-blue); font-size: 0.75rem;">
+                <strong>Note:</strong> All Exam Halls and Academic Departments mentioned in the upload file must already exist in the database, otherwise the validator will reject the import.
+            </div>
+            
+            <!-- Link to download sample data -->
+            <div style="text-align: center; margin-top: 10px;">
+                <i class="fas fa-info-circle text-secondary"></i> Sample templates are available in the project folder.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

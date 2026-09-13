@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Reports Panel - Smart Invigilation{% endblock %}
+{% block page_title %}Reports Center & Export Panel{% endblock %}
+
+{% block content %}
+<div class="charts-grid" style="grid-template-columns: 1fr 2fr; gap: 24px;">
+    <!-- Report Options Control -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3 class="panel-title">Report Settings</h3>
+        </div>
+        <div class="panel-body">
+            <form method="GET" action="{{ url_for('admin.download_report') }}" id="report-download-form" style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="form-group">
+                    <label for="report-type-select">Report Scope</label>
+                    <select id="report-type-select" name="type" class="form-control">
+                        <option value="general">Overall Schedule</option>
+                        <option value="faculty">Faculty-wise Schedule</option>
+                        <option value="department">Department-wise Schedule</option>
+                        <option value="hall">Exam Hall-wise Schedule</option>
+                        <option value="date">Date-wise Schedule</option>
+                    </select>
+                </div>
+                
+                <!-- Dynamic filter options (toggled via JS) -->
+                <div class="form-group filter-option" id="opt-faculty" style="display: none;">
+                    <label for="faculty_id_select">Select Faculty Member</label>
+                    <select id="faculty_id_select" name="faculty_id" class="form-control">
+                        {% for fac in faculties %}
+                            <option value="{{ fac.id }}">{{ fac.name }} ({{ fac.department.name }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group filter-option" id="opt-department" style="display: none;">
+                    <label for="department_id_select">Select Department</label>
+                    <select id="department_id_select" name="department_id" class="form-control">
+                        {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group filter-option" id="opt-hall" style="display: none;">
+                    <label for="hall_id_select">Select Exam Hall</label>
+                    <select id="hall_id_select" name="hall_id" class="form-control">
+                        {% for hall in halls %}
+                            <option value="{{ hall.id }}">{{ hall.name }} (Cap: {{ hall.capacity }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group filter-option" id="opt-date" style="display: none;">
+                    <label for="date_select">Select Date</label>
+                    <input type="date" id="date_select" name="date" class="form-control" value="2026-08-04">
+                </div>
+                
+                <div class="form-group">
+                    <label>File Format</label>
+                    <select name="format" class="form-control" id="format-select">
+                        <option value="excel">Microsoft Excel (.xlsx)</option>
+                        <option value="pdf">Adobe PDF (.pdf)</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="margin-top: 10px; padding: 14px;">
+                    <i class="fas fa-file-download"></i><span>Download Report</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Preview Info Panel -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3 class="panel-title">Report Customization Help</h3>
+        </div>
+        <div class="panel-body" style="font-size: 0.9rem; line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
+            <p>Customize and download invigilation reports for notice boards, departments, or administrative files:</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div style="background-color: var(--bg-tertiary); padding: 16px; border-radius: var(--border-radius);">
+                    <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; color: var(--accent-blue);"><i class="fas fa-file-excel"></i> Excel Spreadsheet</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Generates stylized worksheets with column autofitting. Ideal for editing, filtering, and data analysis.</p>
+                </div>
+                <div style="background-color: var(--bg-tertiary); padding: 16px; border-radius: var(--border-radius);">
+                    <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; color: var(--info);"><i class="fas fa-file-pdf"></i> PDF Document</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Generates landscape print-ready documents with page numbering, running headers, and borders. Ideal for printing and physical distribution.</p>
+                </div>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 10px 0;">
+            
+            <h4 style="font-weight: 600; font-size: 0.95rem;">Export Types Description:</h4>
+            <ul style="padding-left: 20px; list-style-type: circle; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
+                <li><strong>Overall Schedule</strong>: Complete registry of all assignments across all dates and halls.</li>
+                <li><strong>Faculty-wise Schedule</strong>: Personal duty log for the selected professor.</li>
+                <li><strong>Department-wise Schedule</strong>: Lists only assignments of faculty members belonging to the selected department.</li>
+                <li><strong>Exam Hall-wise Schedule</strong>: Daily invigilation calendar for the selected room.</li>
+                <li><strong>Date-wise Schedule</strong>: Schedule of duties for a single day.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const typeSelect = document.getElementById('report-type-select');
+        const filterContainers = {
+            'faculty': document.getElementById('opt-faculty'),
+            'department': document.getElementById('opt-department'),
+            'hall': document.getElementById('opt-hall'),
+            'date': document.getElementById('opt-date')
+        };
+        
+        function handleTypeChange() {
+            const selectedType = typeSelect.value;
+            
+            // Hide all filter containers
+            Object.values(filterContainers).forEach(container => {
+                if (container) container.style.display = 'none';
+            });
+            
+            // Show selected container
+            if (filterContainers[selectedType]) {
+                filterContainers[selectedType].style.display = 'block';
+            }
+        }
+        
+        typeSelect.addEventListener('change', handleTypeChange);
+        handleTypeChange(); // Initialize
+    });
+</script>
+{% endblock %}
